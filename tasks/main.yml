@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Bergruebe
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Perform Beszel installation tasks
+  when: beszel_enabled | bool
+  tags:
+    - setup-all
+    - setup-beszel
+    - install-all
+    - install-beszel
+  block:
+    - name: Validate Beszel configuration
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
+    - name: Install Beszel
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
+
+- name: Perform Beszel uninstallation tasks
+  when: not beszel_enabled | bool
+  tags:
+    - setup-all
+    - setup-beszel
+  block:
+    - name: Uninstall Beszel
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"

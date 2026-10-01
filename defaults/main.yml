@@ -1,0 +1,299 @@
+# SPDX-FileCopyrightText: 2026 Bergruebe
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+# Project source code URL: https://github.com/henrygd/beszel
+
+beszel_enabled: true
+
+beszel_identifier: beszel
+beszel_base_path: "/{{ beszel_identifier }}"
+beszel_data_path: "{{ beszel_base_path }}/data"
+beszel_socket_path: "{{ beszel_base_path }}/socket"
+
+# renovate: datasource=docker depName=henrygd/beszel versioning=semver
+beszel_version: 0.20.0
+
+beszel_uid: ""
+beszel_gid: ""
+
+# The hostname at which Beszel is served.
+beszel_hostname: ""
+
+# The path at which Beszel is served.
+# This value must either be `/` or not end with a slash (e.g. `/beszel`).
+beszel_path_prefix: /
+
+# The scheme at which Beszel is reachable. Only used for building `beszel_app_url`.
+beszel_scheme: https
+
+# The public URL of the hub. Used for links in emails and notifications.
+# Controls the `APP_URL` environment variable.
+beszel_app_url: "{{ beszel_scheme }}://{{ beszel_hostname }}{{ '' if beszel_path_prefix == '/' else beszel_path_prefix }}"
+
+beszel_container_image: "{{ beszel_container_image_registry_prefix }}henrygd/beszel:{{ beszel_container_image_tag }}"
+beszel_container_image_registry_prefix: "{{ beszel_container_image_registry_prefix_upstream }}"
+beszel_container_image_registry_prefix_upstream: "{{ beszel_container_image_registry_prefix_upstream_default }}"
+beszel_container_image_registry_prefix_upstream_default: docker.io/
+beszel_container_image_tag: "{{ beszel_version }}"
+
+# The base container network. It will be auto-created by this role if it doesn't exist already.
+beszel_container_network: "{{ beszel_identifier }}"
+
+# Control if the container network is deleted on uninstalling.
+beszel_container_network_deletion_enabled: true
+
+# Specify how the container publishes its HTTP port (as defined by `beszel_container_http_port`).
+#
+# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:8090"), or empty string to not expose.
+beszel_container_http_host_bind_port: ""
+
+# The port number of the Beszel hub in the container
+beszel_container_http_port: 8090
+
+# A list of additional container networks that the container would be connected to.
+# The role does not create these networks, so make sure they already exist.
+# Use this to expose this container to another reverse proxy, which runs in a different container network.
+beszel_container_additional_networks: "{{ beszel_container_additional_networks_auto + beszel_container_additional_networks_custom }}"
+beszel_container_additional_networks_auto: []
+beszel_container_additional_networks_custom: []
+
+# A list of additional "volumes" to mount in the container.
+# This list gets populated dynamically at runtime. You can provide a different default value,
+# if you wish to mount your own files into the container.
+# Contains definition objects like this: `{"type": "bind", "src": "/outside", "dst": "/inside", "options": "readonly"}.
+# See the `--mount` documentation for the `docker run` command.
+beszel_container_additional_volumes: "{{ beszel_container_additional_volumes_auto + beszel_container_additional_volumes_custom }}"
+beszel_container_additional_volumes_auto: []
+beszel_container_additional_volumes_custom: []
+
+# beszel_container_labels_traefik_enabled controls whether labels to assist a Traefik reverse-proxy will be attached to the container.
+# See `../templates/labels.j2` for details.
+#
+# To inject your own other container labels, see `beszel_container_labels_additional_labels_custom`.
+beszel_container_labels_traefik_enabled: true
+beszel_container_labels_traefik_docker_network: "{{ beszel_container_network }}"
+beszel_container_labels_traefik_hostname: "{{ beszel_hostname }}"
+# The path prefix must either be `/` or not end with a slash (e.g. `/beszel`).
+beszel_container_labels_traefik_path_prefix: "{{ beszel_path_prefix }}"
+beszel_container_labels_traefik_rule: "Host(`{{ beszel_container_labels_traefik_hostname }}`){% if beszel_container_labels_traefik_path_prefix != '/' %} && PathPrefix(`{{ beszel_container_labels_traefik_path_prefix }}`){% endif %}"
+beszel_container_labels_traefik_priority: 0
+beszel_container_labels_traefik_entrypoints: web-secure
+beszel_container_labels_traefik_tls: "{{ beszel_container_labels_traefik_entrypoints != 'web' }}"
+beszel_container_labels_traefik_tls_certResolver: default  # noqa var-naming
+
+# Controls which additional headers to attach to all HTTP requests.
+# To add your own custom request headers, use `beszel_container_labels_traefik_additional_request_headers_custom`
+beszel_container_labels_traefik_additional_request_headers: "{{ beszel_container_labels_traefik_additional_request_headers_auto | combine(beszel_container_labels_traefik_additional_request_headers_custom) }}"
+beszel_container_labels_traefik_additional_request_headers_auto: {}
+beszel_container_labels_traefik_additional_request_headers_custom: {}
+
+# Controls which additional headers to attach to all HTTP responses.
+# To add your own custom response headers, use `beszel_container_labels_traefik_additional_response_headers_custom`
+beszel_container_labels_traefik_additional_response_headers: "{{ beszel_container_labels_traefik_additional_response_headers_auto | combine(beszel_container_labels_traefik_additional_response_headers_custom) }}"
+beszel_container_labels_traefik_additional_response_headers_auto: |
+  {{
+    {}
+    | combine ({'X-XSS-Protection': beszel_http_header_xss_protection} if beszel_http_header_xss_protection else {})
+    | combine ({'X-Content-Type-Options': beszel_http_header_content_type_options} if beszel_http_header_content_type_options else {})
+    | combine ({'Permissions-Policy': beszel_http_header_permissions_policy} if beszel_http_header_permissions_policy else {})
+    | combine ({'Strict-Transport-Security': beszel_http_header_strict_transport_security} if beszel_http_header_strict_transport_security and beszel_container_labels_traefik_tls else {})
+  }}
+beszel_container_labels_traefik_additional_response_headers_custom: {}
+
+# beszel_container_labels_additional_labels contains a multiline string with additional labels to add to the container label file.
+# See `../templates/labels.j2` for details.
+# To add your own custom labels, use `beszel_container_labels_additional_labels_custom`
+#
+# Example:
+# beszel_container_labels_additional_labels_custom:
+#   - my.label=1
+#   - another.label="here"
+beszel_container_labels_additional_labels: "{{ beszel_container_labels_additional_labels_auto + beszel_container_labels_additional_labels_custom }}"
+beszel_container_labels_additional_labels_auto: []
+beszel_container_labels_additional_labels_custom: []
+
+# The container runs with a read-only root filesystem.
+# Only the data directory (and the optional agent socket directory) is writable,
+# and `/tmp` is a tmpfs mount with the size specified here.
+beszel_container_tmpfs_tmp_size: 100m
+
+# A list of extra arguments to pass to the container (`docker create` command)
+beszel_container_extra_arguments: "{{ beszel_container_extra_arguments_auto + beszel_container_extra_arguments_custom }}"
+beszel_container_extra_arguments_auto: []
+beszel_container_extra_arguments_custom: []
+
+# Specifies the value of the `X-XSS-Protection` header
+# Stops pages from loading when they detect reflected cross-site scripting (XSS) attacks.
+#
+# Learn more about it is here:
+# - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
+# - https://portswigger.net/web-security/cross-site-scripting/reflected
+beszel_http_header_xss_protection: "1; mode=block"
+
+# Specifies the value of the `X-Content-Type-Options` header.
+# See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
+beszel_http_header_content_type_options: nosniff
+
+# Specifies the value of the `Permissions-Policy` header.
+# See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy
+beszel_http_header_permissions_policy: "{{ 'interest-cohort=()' if beszel_floc_optout_enabled else '' }}"
+
+# Specifies the value of the `Strict-Transport-Security` header.
+# See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
+beszel_http_header_strict_transport_security: "max-age=31536000; includeSubDomains{{ '; preload' if beszel_hsts_preload_enabled else '' }}"
+
+# Controls whether to send a "Permissions-Policy interest-cohort=();" header along with all responses
+#
+# Learn more about what it is here:
+# - https://www.eff.org/deeplinks/2021/03/googles-floc-terrible-idea
+# - https://paramdeo.com/blog/opting-your-website-out-of-googles-floc-network
+# - https://amifloced.org/
+#
+# See: `beszel_http_header_permissions_policy`
+beszel_floc_optout_enabled: true
+
+# Controls if HSTS preloading is enabled
+#
+# In its strongest and recommended form, the [HSTS policy](https://www.chromium.org/hsts) includes all subdomains, and
+# indicates a willingness to be "preloaded" into browsers:
+# `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
+# For more information visit:
+# - https://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security
+# - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
+# - https://hstspreload.org/#opt-in
+# See: `beszel_http_header_strict_transport_security`
+beszel_hsts_preload_enabled: false
+
+# List of systemd services that the Beszel systemd service depends on
+beszel_systemd_required_services_list: "{{ beszel_systemd_required_services_list_default + beszel_systemd_required_services_list_auto + beszel_systemd_required_services_list_custom }}"
+beszel_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
+beszel_systemd_required_services_list_auto: []
+beszel_systemd_required_services_list_custom: []
+
+# List of systemd services that the Beszel systemd service wants
+beszel_systemd_wanted_services_list: "{{ beszel_systemd_wanted_services_list_default + beszel_systemd_wanted_services_list_auto + beszel_systemd_wanted_services_list_custom }}"
+beszel_systemd_wanted_services_list_default: []
+beszel_systemd_wanted_services_list_auto: []
+beszel_systemd_wanted_services_list_custom: []
+
+# Controls how long to wait for the container to stop gracefully before killing it.
+beszel_container_stop_grace_time_seconds: "{{ devture_systemd_docker_base_container_stop_grace_time_seconds }}"
+
+# Controls how long the pre-start cleanup should wait for stale container-name release
+# before failing startup explicitly.
+beszel_container_cleanup_timeout_seconds: "{{ devture_systemd_docker_base_container_cleanup_timeout_seconds }}"
+
+# Controls the delay between pre-start cleanup retries.
+beszel_container_cleanup_retry_delay_seconds: "{{ devture_systemd_docker_base_container_cleanup_retry_delay_seconds }}"
+
+# Shell command used in the systemd pre-start phase to deterministically remove a stale
+# container and wait until Docker releases its name.
+beszel_container_cleanup_command: |
+  i=0;
+  while [ "$i" -lt {{ beszel_container_cleanup_timeout_seconds }} ]; do
+  {{ devture_systemd_docker_base_host_command_docker }} stop -t {{ beszel_container_stop_grace_time_seconds }} {{ beszel_identifier }} >/dev/null 2>&1 || true;
+  {{ devture_systemd_docker_base_host_command_docker }} rm -f {{ beszel_identifier }} >/dev/null 2>&1 || true;
+  if {{ devture_systemd_docker_base_host_command_docker }} container inspect {{ beszel_identifier }} >/dev/null 2>&1; then
+  i=$((i + 1));
+  sleep {{ beszel_container_cleanup_retry_delay_seconds }};
+  continue;
+  fi;
+  if {{ devture_systemd_docker_base_host_command_docker }} info >/dev/null 2>&1; then
+  exit 0;
+  fi;
+  echo "Failed to query Docker daemon while cleaning up {{ beszel_identifier }}" >&2;
+  exit 1;
+  done;
+  echo "Failed to remove stale container {{ beszel_identifier }} after {{ beszel_container_cleanup_timeout_seconds }} attempts" >&2;
+  exit 1
+
+########################################################################
+#                                                                      #
+# local agent                                                          #
+#                                                                      #
+########################################################################
+
+# Controls whether a directory for a Unix socket is mounted into the hub container,
+# so that a Beszel agent running on the same host can be connected via the socket
+# instead of SSH over the network.
+#
+# The agent itself is not installed by this role. Configure it with `LISTEN=<socket path on the host>/beszel.sock`
+# and add the system in the hub's web UI with `beszel_agent_socket_path_container`/beszel.sock as its host.
+beszel_agent_socket_enabled: false
+
+# The path on the host to the directory where the agent creates its socket (bind-mount source)
+beszel_agent_socket_path_host: "{{ beszel_socket_path }}"
+
+# The path inside the hub container where the socket directory is mounted
+beszel_agent_socket_path_container: /beszel_socket
+
+########################################################################
+#                                                                      #
+# /local agent                                                         #
+#                                                                      #
+########################################################################
+
+# Specify the timezone
+beszel_environment_variables_tz: UTC
+
+# Controls the `CHECK_UPDATES` environment variable.
+# Enables checking for new Beszel versions and showing a notification in the web UI.
+beszel_environment_variable_check_updates: false
+
+# Controls the `CONTAINER_DETAILS` environment variable.
+# Allows viewing container inspection data and logs in the web UI.
+beszel_environment_variable_container_details: true
+
+# Controls the `DISABLE_PASSWORD_AUTH` environment variable.
+# Only makes sense if you have set up OAuth2/OIDC login.
+beszel_environment_variable_disable_password_auth: false
+
+# Controls the `USER_CREATION` environment variable.
+# Enables automatic creation of user accounts via OAuth2/OIDC.
+beszel_environment_variable_user_creation: false
+
+# Controls the `MFA_OTP` environment variable.
+# Enables one-time password (OTP) multi-factor authentication.
+beszel_environment_variable_mfa_otp: false
+
+# Controls the `SHARE_ALL_SYSTEMS` environment variable.
+# Makes all systems visible and editable by all users.
+beszel_environment_variable_share_all_systems: false
+
+# Controls the `TRUSTED_PROXY_IPS` environment variable.
+# Comma-separated IPs or CIDR ranges, which are allowed to set `beszel_environment_variable_trusted_auth_header`.
+beszel_environment_variable_trusted_proxy_ips: ""
+
+# Controls the `TRUSTED_AUTH_HEADER` environment variable (forward authentication).
+beszel_environment_variable_trusted_auth_header: ""
+
+# Controls the `CSP` environment variable (value of the `Content-Security-Policy` header served by Beszel).
+beszel_environment_variable_csp: ""
+
+# Controls the `USER_EMAIL` and `USER_PASSWORD` environment variables.
+# If both are set, an initial user account is created on the first start.
+# Changing them afterwards has no effect.
+beszel_environment_variable_user_email: ""
+beszel_environment_variable_user_password: ""
+
+# Additional environment variables to pass to the Beszel container.
+# You can use this to further influence the default configuration.
+# See: https://www.beszel.dev/guide/environment-variables
+#
+# Example:
+# beszel_environment_variables_additional_variables: |
+#   HEARTBEAT_URL=https://healthchecks.example.com/ping/uuid
+#   HEARTBEAT_INTERVAL=60
+beszel_environment_variables_additional_variables: ""
+
+# beszel_restart_necessary controls whether the Beszel systemd
+# service will be restarted (when true) or merely started (when false) by the
+# systemd service manager role (when conditional restart is enabled).
+#
+# This value is automatically computed during installation based on whether
+# any configuration files, the systemd service file, or the container image changed.
+# The default of `false` means "no restart needed" — appropriate when the role's
+# installation tasks haven't run (e.g., due to --tags skipping them).
+beszel_restart_necessary: false

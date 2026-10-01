@@ -1,0 +1,7 @@
+.ansible
+
+/var/
+
+molecule/venv
+
+/quellen/

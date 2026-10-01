@@ -1,0 +1,88 @@
+# SPDX-FileCopyrightText: 2026 Bergruebe
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Ensure Beszel paths exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+    owner: "{{ beszel_uid }}"
+    group: "{{ beszel_gid }}"
+  with_items:
+    - { path: "{{ beszel_base_path }}", mode: "0700", when: true }
+    - { path: "{{ beszel_data_path }}", mode: "0700", when: true }
+    # The agent (which may run as another user) needs to be able to enter this directory and create its socket there.
+    - { path: "{{ beszel_agent_socket_path_host }}", mode: "0770", when: "{{ beszel_agent_socket_enabled and beszel_agent_socket_path_host == beszel_socket_path }}" }
+  when: item.when | bool
+
+- name: Ensure Beszel support files installed
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/{{ item }}.j2"
+    dest: "{{ beszel_base_path }}/{{ item }}"
+    mode: "0640"
+    owner: "{{ beszel_uid }}"
+    group: "{{ beszel_gid }}"
+  with_items:
+    - env
+    - labels
+  register: beszel_support_files_result
+
+- name: Ensure Beszel container image is pulled via community.docker.docker_image_pull
+  when: devture_systemd_docker_base_container_image_pull_method == 'ansible-module'
+  community.docker.docker_image_pull:
+    name: "{{ beszel_container_image }}"
+    pull: always
+  register: beszel_container_image_pull_result_ansible_module
+  retries: "{{ devture_playbook_help_container_retries_count }}"
+  delay: "{{ devture_playbook_help_container_retries_delay }}"
+  until: beszel_container_image_pull_result_ansible_module is not failed
+
+- name: Ensure Beszel container image is pulled via ansible.builtin.command
+  when: devture_systemd_docker_base_container_image_pull_method == 'command'
+  ansible.builtin.command:
+    cmd: "{{ devture_systemd_docker_base_host_command_docker }} pull {{ beszel_container_image }}"
+  register: beszel_container_image_pull_result_command
+  retries: "{{ devture_playbook_help_container_retries_count }}"
+  delay: "{{ devture_playbook_help_container_retries_delay }}"
+  until: beszel_container_image_pull_result_command is not failed
+  changed_when: "'Downloaded newer image' in beszel_container_image_pull_result_command.stdout"
+
+- name: Ensure Beszel container network is created via community.docker.docker_network
+  when: devture_systemd_docker_base_container_network_creation_method == 'ansible-module'
+  community.docker.docker_network:
+    enable_ipv6: "{{ devture_systemd_docker_base_ipv6_enabled }}"
+    name: "{{ beszel_container_network }}"
+    driver: bridge
+    driver_options: "{{ devture_systemd_docker_base_container_networks_driver_options }}"
+  register: beszel_network_creation_result
+
+- name: Ensure Beszel container network is created via ansible.builtin.command
+  when: devture_systemd_docker_base_container_network_creation_method == 'command'
+  ansible.builtin.command:
+    cmd: >-
+      {{ devture_systemd_docker_base_host_command_docker }} network create
+      {% if devture_systemd_docker_base_ipv6_enabled %}--ipv6{% endif %}
+      {{ devture_systemd_docker_base_container_networks_driver_options_string }}
+      {{ beszel_container_network }}
+  register: beszel_network_creation_result
+  changed_when: beszel_network_creation_result.rc == 0
+  failed_when: beszel_network_creation_result.rc != 0 and 'already exists' not in beszel_network_creation_result.stderr
+
+- name: Ensure Beszel systemd service is present
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/systemd/beszel.service.j2"
+    dest: "{{ devture_systemd_docker_base_systemd_path }}/{{ beszel_identifier }}.service"
+    mode: "0644"
+  register: beszel_systemd_service_result
+
+- name: Determine whether Beszel needs a restart
+  ansible.builtin.set_fact:
+    beszel_restart_necessary: >-
+      {{
+        beszel_support_files_result.changed | default(false)
+        or beszel_systemd_service_result.changed | default(false)
+        or beszel_container_image_pull_result_ansible_module.changed | default(false)
+        or beszel_container_image_pull_result_command.changed | default(false)
+      }}

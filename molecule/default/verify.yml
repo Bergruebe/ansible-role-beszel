@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: 2026 Bergruebe
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Verify Beszel
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    # This playbook runs on its own, so the role's defaults are not in scope
+    # here. Reading them from the controller keeps the expected version tied to
+    # defaults/main.yml.
+    - name: Load the Beszel role defaults
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
+        name: beszel_defaults
+
+    - name: Wait for Beszel service to become active (up to 180s)
+      ansible.builtin.systemd:
+        name: beszel.service
+      register: beszel_service
+      until: beszel_service.status.ActiveState == 'active'
+      retries: 36
+      delay: 5
+
+    - name: Assert Beszel service is active
+      ansible.builtin.assert:
+        that: beszel_service.status.ActiveState == 'active'
+        fail_msg: "beszel.service not active ({{ beszel_service.status.ActiveState }})"
+        success_msg: "beszel.service is active"
+
+    - name: Retrieve Beszel service log for debugging
+      when: beszel_debug_service_enabled | bool
+      ansible.builtin.command:
+        cmd: journalctl -xeu beszel.service
+      changed_when: false
+
+    - name: Inspect the Beszel container
+      ansible.builtin.command:
+        cmd: docker inspect --format '{{ "{{" }} .HostConfig.ReadonlyRootfs {{ "}}" }}' beszel
+      register: beszel_container_readonly
+      changed_when: false
+
+    - name: Assert the Beszel container runs with a read-only root filesystem
+      ansible.builtin.assert:
+        that: beszel_container_readonly.stdout | trim == 'true'
+        fail_msg: "The Beszel container does not run read-only ({{ beszel_container_readonly.stdout }})"
+        success_msg: "The Beszel container runs with a read-only root filesystem"
+
+    # The health endpoint is served by PocketBase once the hub has opened its
+    # database in the data directory, which proves the bind mount is writable.
+    - name: Wait for the Beszel health endpoint to respond (up to 5m)
+      ansible.builtin.uri:
+        url: "http://localhost:{{ beszel_container_http_host_bind_port }}/api/health"
+        method: GET
+        status_code: 200
+      register: beszel_health
+      until: beszel_health.status == 200
+      retries: 60
+      delay: 5
+
+    - name: Retrieve the Beszel web frontend
+      ansible.builtin.uri:
+        url: "http://localhost:{{ beszel_container_http_host_bind_port }}/"
+        method: GET
+        status_code: 200
+        return_content: true
+      register: beszel_frontend
+
+    - name: Assert the Beszel web frontend is served
+      ansible.builtin.assert:
+        that: "'beszel' in (beszel_frontend.content | lower)"
+        fail_msg: "The Beszel web frontend did not respond as expected"
+        success_msg: "The Beszel web frontend is served"
+
+    # Renovate bumps `beszel_version`, so the image that is actually running is
+    # asserted here - otherwise a bump could go green without the bumped image
+    # ever having been exercised.
+    - name: Retrieve the image of the running Beszel container
+      ansible.builtin.command:
+        cmd: docker inspect --format '{{ "{{" }} .Config.Image {{ "}}" }}' beszel
+      register: beszel_container_image
+      changed_when: false
+
+    - name: Assert the running Beszel is the version the role points at
+      ansible.builtin.assert:
+        that: (beszel_container_image.stdout | trim).endswith(':' ~ beszel_defaults.beszel_version)
+        fail_msg: "Expected Beszel {{ beszel_defaults.beszel_version }}, but the container runs '{{ beszel_container_image.stdout }}'"
+        success_msg: "Beszel {{ beszel_defaults.beszel_version }} is the version actually running"

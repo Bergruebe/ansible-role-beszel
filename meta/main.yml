@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: Bergruebe
+  role_name: beszel
+  namespace: mash
+  description: Ansible role to install the Beszel hub, a lightweight server monitoring platform.
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+    - name: ArchLinux
+      versions:
+        - all
+    - name: EL
+      versions:
+        - all
+  license: AGPL-3.0-or-later
+  min_ansible_version: "2.1"
