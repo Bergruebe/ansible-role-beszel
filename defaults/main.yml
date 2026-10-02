@@ -83,6 +83,19 @@ beszel_container_labels_traefik_entrypoints: web-secure
 beszel_container_labels_traefik_tls: "{{ beszel_container_labels_traefik_entrypoints != 'web' }}"
 beszel_container_labels_traefik_tls_certResolver: default  # noqa var-naming
 
+# beszel_container_labels_tsdproxy_enabled controls whether labels for TSDProxy will be attached to the container,
+# so that the hub becomes reachable in your Tailscale network (tailnet) at `https://<name>.<tailnet>.ts.net`.
+# TSDProxy needs to share a container network with the hub (see `beszel_container_additional_networks_custom`).
+# See: https://almeidapaulopt.github.io/tsdproxy/docs/docker/
+beszel_container_labels_tsdproxy_enabled: false
+# The machine name in the tailnet. Defaults to the container name.
+beszel_container_labels_tsdproxy_name: "{{ beszel_identifier }}"
+beszel_container_labels_tsdproxy_ephemeral: false
+# Exposes the hub to the public internet via Tailscale Funnel. Usually not what you want.
+beszel_container_labels_tsdproxy_funnel: false
+beszel_container_labels_tsdproxy_dash_visible: true
+beszel_container_labels_tsdproxy_dash_label: Beszel
+
 # Controls which additional headers to attach to all HTTP requests.
 # To add your own custom request headers, use `beszel_container_labels_traefik_additional_request_headers_custom`
 beszel_container_labels_traefik_additional_request_headers: "{{ beszel_container_labels_traefik_additional_request_headers_auto | combine(beszel_container_labels_traefik_additional_request_headers_custom) }}"
@@ -254,8 +267,13 @@ beszel_environment_variable_disable_password_auth: false
 # Enables automatic creation of user accounts via OAuth2/OIDC.
 beszel_environment_variable_user_creation: false
 
+# Controls the `OAUTH_DISABLE_POPUP` environment variable.
+# Opens the OAuth2/OIDC login in the same window instead of a popup.
+beszel_environment_variable_oauth_disable_popup: false
+
 # Controls the `MFA_OTP` environment variable.
 # Enables one-time password (OTP) multi-factor authentication.
+# Valid values: `false`, `true` (for all users and superusers) or `superusers` (for superusers only)
 beszel_environment_variable_mfa_otp: false
 
 # Controls the `SHARE_ALL_SYSTEMS` environment variable.

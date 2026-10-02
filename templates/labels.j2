@@ -55,6 +55,16 @@ traefik.http.routers.{{ beszel_identifier }}.tls.certResolver={{ beszel_containe
 traefik.http.services.{{ beszel_identifier }}.loadbalancer.server.port={{ beszel_container_http_port }}
 {% endif %}
 
+{% if beszel_container_labels_tsdproxy_enabled %}
+tsdproxy.enable=true
+tsdproxy.name={{ beszel_container_labels_tsdproxy_name }}
+tsdproxy.container_port={{ beszel_container_http_port }}
+tsdproxy.ephemeral={{ beszel_container_labels_tsdproxy_ephemeral | to_json }}
+tsdproxy.funnel={{ beszel_container_labels_tsdproxy_funnel | to_json }}
+tsdproxy.dash.visible={{ beszel_container_labels_tsdproxy_dash_visible | to_json }}
+tsdproxy.dash.label={{ beszel_container_labels_tsdproxy_dash_label }}
+{% endif %}
+
 {% for arg in beszel_container_labels_additional_labels %}
 {{ arg }}
 {% endfor %}

@@ -56,3 +56,12 @@
         msg: >-
           beszel_container_labels_traefik_path_prefix (`{{ beszel_container_labels_traefik_path_prefix }}`) must either be `/` or not end with a slash (e.g. `/beszel`).
       when: "beszel_container_labels_traefik_path_prefix != '/' and beszel_container_labels_traefik_path_prefix[-1] == '/'"
+
+# TSDProxy always serves the hub at the root of `https://<name>.<tailnet>.ts.net`,
+# while Beszel derives the base path of its web UI from `APP_URL`.
+- name: Fail if TSDProxy is enabled for Beszel while it is hosted under a subpath
+  ansible.builtin.fail:
+    msg: >-
+      `beszel_container_labels_tsdproxy_enabled` requires `beszel_path_prefix` to be `/` (currently `{{ beszel_path_prefix }}`).
+      TSDProxy serves the hub at the root of its tailnet hostname, while Beszel builds the URLs of its web UI from `APP_URL`.
+  when: "beszel_container_labels_tsdproxy_enabled | bool and beszel_path_prefix != '/'"
