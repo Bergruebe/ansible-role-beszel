@@ -47,7 +47,7 @@ Currently these testing scenarios are available:
 
 ### `default`
 
-Tests a standard Beszel installation.
+Tests a standard Beszel hub installation.
 
 ## Running
 

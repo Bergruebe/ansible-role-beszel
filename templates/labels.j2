@@ -4,67 +4,67 @@ SPDX-FileCopyrightText: 2026 Bergruebe
 SPDX-License-Identifier: AGPL-3.0-or-later
 #}
 
-{% if beszel_container_labels_traefik_enabled %}
+{% if beszel_hub_container_labels_traefik_enabled %}
 traefik.enable=true
 
-{% if beszel_container_labels_traefik_docker_network %}
-traefik.docker.network={{ beszel_container_labels_traefik_docker_network }}
+{% if beszel_hub_container_labels_traefik_docker_network %}
+traefik.docker.network={{ beszel_hub_container_labels_traefik_docker_network }}
 {% endif %}
 
 {% set middlewares = [] %}
 
-{% if beszel_container_labels_traefik_path_prefix != '/' %}
-traefik.http.middlewares.{{ beszel_identifier }}-slashless-redirect.redirectregex.regex=^({{ beszel_container_labels_traefik_path_prefix | quote }})$
-traefik.http.middlewares.{{ beszel_identifier }}-slashless-redirect.redirectregex.replacement=${1}/
-{% set middlewares = middlewares + [beszel_identifier + '-slashless-redirect'] %}
+{% if beszel_hub_container_labels_traefik_path_prefix != '/' %}
+traefik.http.middlewares.{{ beszel_hub_identifier }}-slashless-redirect.redirectregex.regex=^({{ beszel_hub_container_labels_traefik_path_prefix | quote }})$
+traefik.http.middlewares.{{ beszel_hub_identifier }}-slashless-redirect.redirectregex.replacement=${1}/
+{% set middlewares = middlewares + [beszel_hub_identifier + '-slashless-redirect'] %}
 {% endif %}
 
-{% if beszel_container_labels_traefik_path_prefix != '/' %}
-traefik.http.middlewares.{{ beszel_identifier }}-strip-prefix.stripprefix.prefixes={{ beszel_container_labels_traefik_path_prefix }}
-{% set middlewares = middlewares + [beszel_identifier + '-strip-prefix'] %}
+{% if beszel_hub_container_labels_traefik_path_prefix != '/' %}
+traefik.http.middlewares.{{ beszel_hub_identifier }}-strip-prefix.stripprefix.prefixes={{ beszel_hub_container_labels_traefik_path_prefix }}
+{% set middlewares = middlewares + [beszel_hub_identifier + '-strip-prefix'] %}
 {% endif %}
 
-{% if beszel_container_labels_traefik_additional_request_headers.keys() | length > 0 %}
-{% for name, value in beszel_container_labels_traefik_additional_request_headers.items() %}
-traefik.http.middlewares.{{ beszel_identifier }}-add-request-headers.headers.customrequestheaders.{{ name }}={{ value }}
+{% if beszel_hub_container_labels_traefik_additional_request_headers.keys() | length > 0 %}
+{% for name, value in beszel_hub_container_labels_traefik_additional_request_headers.items() %}
+traefik.http.middlewares.{{ beszel_hub_identifier }}-add-request-headers.headers.customrequestheaders.{{ name }}={{ value }}
 {% endfor %}
-{% set middlewares = middlewares + [beszel_identifier + '-add-request-headers'] %}
+{% set middlewares = middlewares + [beszel_hub_identifier + '-add-request-headers'] %}
 {% endif %}
 
-{% if beszel_container_labels_traefik_additional_response_headers.keys() | length > 0 %}
-{% for name, value in beszel_container_labels_traefik_additional_response_headers.items() %}
-traefik.http.middlewares.{{ beszel_identifier }}-add-response-headers.headers.customresponseheaders.{{ name }}={{ value }}
+{% if beszel_hub_container_labels_traefik_additional_response_headers.keys() | length > 0 %}
+{% for name, value in beszel_hub_container_labels_traefik_additional_response_headers.items() %}
+traefik.http.middlewares.{{ beszel_hub_identifier }}-add-response-headers.headers.customresponseheaders.{{ name }}={{ value }}
 {% endfor %}
-{% set middlewares = middlewares + [beszel_identifier + '-add-response-headers'] %}
+{% set middlewares = middlewares + [beszel_hub_identifier + '-add-response-headers'] %}
 {% endif %}
 
-traefik.http.routers.{{ beszel_identifier }}.rule={{ beszel_container_labels_traefik_rule }}
-{% if beszel_container_labels_traefik_priority | int > 0 %}
-traefik.http.routers.{{ beszel_identifier }}.priority={{ beszel_container_labels_traefik_priority }}
+traefik.http.routers.{{ beszel_hub_identifier }}.rule={{ beszel_hub_container_labels_traefik_rule }}
+{% if beszel_hub_container_labels_traefik_priority | int > 0 %}
+traefik.http.routers.{{ beszel_hub_identifier }}.priority={{ beszel_hub_container_labels_traefik_priority }}
 {% endif %}
-traefik.http.routers.{{ beszel_identifier }}.service={{ beszel_identifier }}
+traefik.http.routers.{{ beszel_hub_identifier }}.service={{ beszel_hub_identifier }}
 {% if middlewares | length > 0 %}
-traefik.http.routers.{{ beszel_identifier }}.middlewares={{ middlewares | join(',') }}
+traefik.http.routers.{{ beszel_hub_identifier }}.middlewares={{ middlewares | join(',') }}
 {% endif %}
-traefik.http.routers.{{ beszel_identifier }}.entrypoints={{ beszel_container_labels_traefik_entrypoints }}
-traefik.http.routers.{{ beszel_identifier }}.tls={{ beszel_container_labels_traefik_tls | to_json }}
-{% if beszel_container_labels_traefik_tls %}
-traefik.http.routers.{{ beszel_identifier }}.tls.certResolver={{ beszel_container_labels_traefik_tls_certResolver }}
-{% endif %}
-
-traefik.http.services.{{ beszel_identifier }}.loadbalancer.server.port={{ beszel_container_http_port }}
+traefik.http.routers.{{ beszel_hub_identifier }}.entrypoints={{ beszel_hub_container_labels_traefik_entrypoints }}
+traefik.http.routers.{{ beszel_hub_identifier }}.tls={{ beszel_hub_container_labels_traefik_tls | to_json }}
+{% if beszel_hub_container_labels_traefik_tls %}
+traefik.http.routers.{{ beszel_hub_identifier }}.tls.certResolver={{ beszel_hub_container_labels_traefik_tls_certResolver }}
 {% endif %}
 
-{% if beszel_container_labels_tsdproxy_enabled %}
+traefik.http.services.{{ beszel_hub_identifier }}.loadbalancer.server.port={{ beszel_hub_container_http_port }}
+{% endif %}
+
+{% if beszel_hub_container_labels_tsdproxy_enabled %}
 tsdproxy.enable=true
-tsdproxy.name={{ beszel_container_labels_tsdproxy_name }}
-tsdproxy.container_port={{ beszel_container_http_port }}
-tsdproxy.ephemeral={{ beszel_container_labels_tsdproxy_ephemeral | to_json }}
-tsdproxy.funnel={{ beszel_container_labels_tsdproxy_funnel | to_json }}
-tsdproxy.dash.visible={{ beszel_container_labels_tsdproxy_dash_visible | to_json }}
-tsdproxy.dash.label={{ beszel_container_labels_tsdproxy_dash_label }}
+tsdproxy.name={{ beszel_hub_container_labels_tsdproxy_name }}
+tsdproxy.container_port={{ beszel_hub_container_http_port }}
+tsdproxy.ephemeral={{ beszel_hub_container_labels_tsdproxy_ephemeral | to_json }}
+tsdproxy.funnel={{ beszel_hub_container_labels_tsdproxy_funnel | to_json }}
+tsdproxy.dash.visible={{ beszel_hub_container_labels_tsdproxy_dash_visible | to_json }}
+tsdproxy.dash.label={{ beszel_hub_container_labels_tsdproxy_dash_label }}
 {% endif %}
 
-{% for arg in beszel_container_labels_additional_labels %}
+{% for arg in beszel_hub_container_labels_additional_labels %}
 {{ arg }}
 {% endfor %}

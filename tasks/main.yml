@@ -3,24 +3,24 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Perform Beszel installation tasks
-  when: beszel_enabled | bool
+- name: Perform Beszel hub installation tasks
+  when: beszel_hub_enabled | bool
   tags:
     - setup-all
-    - setup-beszel
+    - setup-beszel-hub
     - install-all
-    - install-beszel
+    - install-beszel-hub
   block:
-    - name: Validate Beszel configuration
+    - name: Validate Beszel hub configuration
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
-    - name: Install Beszel
+    - name: Install Beszel hub
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
 
-- name: Perform Beszel uninstallation tasks
-  when: not beszel_enabled | bool
+- name: Perform Beszel hub uninstallation tasks
+  when: not beszel_hub_enabled | bool
   tags:
     - setup-all
-    - setup-beszel
+    - setup-beszel-hub
   block:
-    - name: Uninstall Beszel
+    - name: Uninstall Beszel hub
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"

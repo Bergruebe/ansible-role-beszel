@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: Bergruebe
-  role_name: beszel
+  role_name: beszel_hub
   namespace: mash
   description: Ansible role to install the Beszel hub, a lightweight server monitoring platform.
   platforms:

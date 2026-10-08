@@ -54,25 +54,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
         with:
-          path: beszel
+          path: beszel_hub
 
       - name: Set up Python
         uses: actions/setup-python@v6.3.0
         with:
-          python-version-file: beszel/.python-version
+          python-version-file: beszel_hub/.python-version
           cache: pip
-          cache-dependency-path: beszel/molecule/requirements.txt
+          cache-dependency-path: beszel_hub/molecule/requirements.txt
 
       - name: Install Python dependencies
-        working-directory: beszel
+        working-directory: beszel_hub
         run: pip install -r molecule/requirements.txt
 
       - name: Cache Ansible collections
         uses: actions/cache@v6.1.0
         with:
           path: ~/.ansible/collections
-          key: ansible-collections-${{ hashFiles(format('beszel/molecule/{0}/requirements.yml', matrix.scenario)) }}
+          key: ansible-collections-${{ hashFiles(format('beszel_hub/molecule/{0}/requirements.yml', matrix.scenario)) }}
 
       - name: Run Molecule
-        working-directory: beszel
+        working-directory: beszel_hub
         run: molecule test --scenario-name ${{ matrix.scenario }}

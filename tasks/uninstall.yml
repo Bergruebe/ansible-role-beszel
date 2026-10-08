@@ -3,88 +3,88 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Check existence of Beszel systemd service
+- name: Check existence of Beszel hub systemd service
   ansible.builtin.stat:
-    path: "{{ devture_systemd_docker_base_systemd_path }}/{{ beszel_identifier }}.service"
-  register: beszel_service_stat
+    path: "{{ devture_systemd_docker_base_systemd_path }}/{{ beszel_hub_identifier }}.service"
+  register: beszel_hub_service_stat
 
-- name: Uninstall Beszel systemd services and files
-  when: beszel_service_stat.stat.exists | bool
+- name: Uninstall Beszel hub systemd services and files
+  when: beszel_hub_service_stat.stat.exists | bool
   block:
-    - name: Ensure Beszel systemd service is stopped
+    - name: Ensure Beszel hub systemd service is stopped
       ansible.builtin.service:
-        name: "{{ beszel_identifier }}"
+        name: "{{ beszel_hub_identifier }}"
         state: stopped
         enabled: false
         daemon_reload: true
 
-    - name: Ensure Beszel systemd service does not exist
+    - name: Ensure Beszel hub systemd service does not exist
       ansible.builtin.file:
-        path: "{{ devture_systemd_docker_base_systemd_path }}/{{ beszel_identifier }}.service"
+        path: "{{ devture_systemd_docker_base_systemd_path }}/{{ beszel_hub_identifier }}.service"
         state: absent
 
-    - name: Ensure Beszel support files do not exist
+    - name: Ensure Beszel hub support files do not exist
       ansible.builtin.file:
-        path: "{{ beszel_base_path }}/{{ item }}"
+        path: "{{ beszel_hub_base_path }}/{{ item }}"
         state: absent
       with_items:
         - env
         - labels
 
-    - name: Ensure Beszel socket path does not exist if empty
+    - name: Ensure Beszel hub socket path does not exist if empty
       ansible.builtin.command:
-        cmd: "rmdir {{ beszel_socket_path }}"
-      register: beszel_socket_path_deletion_result
-      changed_when: beszel_socket_path_deletion_result.rc == 0
+        cmd: "rmdir {{ beszel_hub_socket_path }}"
+      register: beszel_hub_socket_path_deletion_result
+      changed_when: beszel_hub_socket_path_deletion_result.rc == 0
       failed_when: false
 
-    - name: Ensure Beszel local data path does not exist if empty
+    - name: Ensure Beszel hub local data path does not exist if empty
       ansible.builtin.command:
-        cmd: "rmdir {{ beszel_data_path }}"
-      register: beszel_data_path_deletion_result
-      changed_when: beszel_data_path_deletion_result.rc == 0
+        cmd: "rmdir {{ beszel_hub_data_path }}"
+      register: beszel_hub_data_path_deletion_result
+      changed_when: beszel_hub_data_path_deletion_result.rc == 0
       failed_when: false
 
-    - name: Ensure Beszel base path does not exist if empty
+    - name: Ensure Beszel hub base path does not exist if empty
       ansible.builtin.command:
-        cmd: "rmdir {{ beszel_base_path }}"
-      register: beszel_base_path_deletion_result
-      changed_when: beszel_base_path_deletion_result.rc == 0
+        cmd: "rmdir {{ beszel_hub_base_path }}"
+      register: beszel_hub_base_path_deletion_result
+      changed_when: beszel_hub_base_path_deletion_result.rc == 0
       failed_when: false
 
-    - name: Ensure Beszel container network does not exist
-      when: beszel_container_network_deletion_enabled
+    - name: Ensure Beszel hub container network does not exist
+      when: beszel_hub_container_network_deletion_enabled
       block:
-        - name: Ensure Beszel container network does not exist via community.docker.docker_network
+        - name: Ensure Beszel hub container network does not exist via community.docker.docker_network
           when: devture_systemd_docker_base_container_network_creation_method == 'ansible-module'
           community.docker.docker_network:
-            name: "{{ beszel_container_network }}"
+            name: "{{ beszel_hub_container_network }}"
             state: absent
-          register: beszel_network_deletion_result
+          register: beszel_hub_network_deletion_result
 
-        - name: Ensure Beszel container network does not exist via ansible.builtin.command
+        - name: Ensure Beszel hub container network does not exist via ansible.builtin.command
           when: devture_systemd_docker_base_container_network_creation_method == 'command'
           ansible.builtin.command:
             cmd: >-
               {{ devture_systemd_docker_base_host_command_docker }} network rm
-              {{ beszel_container_network }}
-          register: beszel_network_deletion_result
-          changed_when: beszel_container_network in beszel_network_deletion_result.stdout
+              {{ beszel_hub_container_network }}
+          register: beszel_hub_network_deletion_result
+          changed_when: beszel_hub_container_network in beszel_hub_network_deletion_result.stdout
 
-- name: Check existence of Beszel local data path
+- name: Check existence of Beszel hub local data path
   ansible.builtin.stat:
-    path: "{{ beszel_data_path }}"
-  register: beszel_data_path_stat
+    path: "{{ beszel_hub_data_path }}"
+  register: beszel_hub_data_path_stat
 
 # We just want to notify the user. Deleting data is too destructive.
-- name: Inject the message about the remaining Beszel local data path
-  when: beszel_data_path_stat.stat.exists | bool
+- name: Inject the message about the remaining Beszel hub local data path
+  when: beszel_hub_data_path_stat.stat.exists | bool
   ansible.builtin.set_fact:
     devture_playbook_runtime_messages_list: |
       {{
         devture_playbook_runtime_messages_list | default([])
         +
         [
-          "Note: As the local Beszel instance has been removed, some old data remains in `" + beszel_data_path + "`. Feel free to delete it."
+          "Note: As the local Beszel hub has been removed, some old data remains in `" + beszel_hub_data_path + "`. Feel free to delete it."
         ]
       }}

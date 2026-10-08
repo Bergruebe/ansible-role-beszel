@@ -11,7 +11,7 @@ dependency:
 driver:
   name: docker
 platforms:
-  - name: beszel-${MOLECULE_DISTRO:-ubuntu2604}-default
+  - name: beszel-hub-${MOLECULE_DISTRO:-ubuntu2604}-default
     image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu2604}-ansible:latest"
     command: ${MOLECULE_DOCKER_COMMAND:-""}
     volumes:
@@ -28,15 +28,15 @@ provisioner:
     group_vars:
       all:
         # Helper variables
-        beszel_debug_service_enabled: false
+        beszel_hub_debug_service_enabled: false
 
-        # Variables for Beszel
-        beszel_uid: 1000
-        beszel_gid: 1000
-        beszel_hostname: localhost
-        beszel_scheme: http
-        beszel_container_labels_traefik_enabled: false
-        beszel_container_http_host_bind_port: 8090
+        # Variables for Beszel hub
+        beszel_hub_uid: 1000
+        beszel_hub_gid: 1000
+        beszel_hub_hostname: localhost
+        beszel_hub_scheme: http
+        beszel_hub_container_labels_traefik_enabled: false
+        beszel_hub_container_http_host_bind_port: 8090
   env:
     # Workaround for https://github.com/ansible/molecule/issues/4391
     ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..:/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles:~/.ansible/roles

@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 Bergruebe
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Setting up Beszel
+# Setting up the Beszel hub
 
 This is an [Ansible](https://www.ansible.com/) role which installs the [Beszel](https://beszel.dev/) hub to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
 
@@ -16,58 +16,58 @@ See the project's [documentation](https://beszel.dev/guide/what-is-beszel) to le
 
 ## Prerequisites
 
-Beszel needs no separate database server. The hub stores its data (an SQLite database managed by PocketBase, and the SSH key pair used to connect to agents) in the directory specified with `beszel_data_path`.
+Beszel needs no separate database server. The hub stores its data (an SQLite database managed by PocketBase, and the SSH key pair used to connect to agents) in the directory specified with `beszel_hub_data_path`.
 
 ## Adjusting the playbook configuration
 
-To enable Beszel with this role, add the following configuration to your `vars.yml` file.
+To enable the Beszel hub with this role, add the following configuration to your `vars.yml` file.
 
 **Note**: the path should be something like `inventory/host_vars/mash.example.com/vars.yml` if you use the [MASH Ansible playbook](https://github.com/mother-of-all-self-hosting/mash-playbook).
 
 ```yaml
 ########################################################################
 #                                                                      #
-# beszel                                                               #
+# beszel_hub                                                           #
 #                                                                      #
 ########################################################################
 
-beszel_enabled: true
+beszel_hub_enabled: true
 
 ########################################################################
 #                                                                      #
-# /beszel                                                              #
+# /beszel_hub                                                          #
 #                                                                      #
 ########################################################################
 ```
 
 ### Set the hostname
 
-To enable the Beszel instance you need to set the hostname as well. To do so, add the following configuration to your `vars.yml` file. Make sure to replace `example.com` with your own value.
+To enable the Beszel hub you need to set the hostname as well. To do so, add the following configuration to your `vars.yml` file. Make sure to replace `example.com` with your own value.
 
 ```yaml
-beszel_hostname: "beszel.example.com"
+beszel_hub_hostname: "beszel.example.com"
 ```
 
 After adjusting the hostname, make sure to adjust your DNS records to point the domain to your server.
 
 ### Set the path prefix (optional)
 
-Beszel can be hosted under a subpath. To do so, add the following configuration to your `vars.yml` file:
+The Beszel hub can be hosted under a subpath. To do so, add the following configuration to your `vars.yml` file:
 
 ```yaml
 # The value must either be `/` or not end with a slash.
-beszel_path_prefix: /beszel
+beszel_hub_path_prefix: /beszel
 ```
 
-The public URL of the hub (Beszel's `APP_URL`), which is used for links in emails and notifications, is derived from `beszel_hostname` and `beszel_path_prefix` automatically. You can override it with `beszel_app_url`.
+The public URL of the hub (Beszel's `APP_URL`), which is used for links in emails and notifications, is derived from `beszel_hub_hostname` and `beszel_hub_path_prefix` automatically. You can override it with `beszel_hub_app_url`.
 
 ### Create the initial user (optional)
 
-By default, Beszel asks you to create the first user account on the web interface. You can also have the account created automatically on the first start by adding the following configuration to your `vars.yml` file:
+By default, the Beszel hub asks you to create the first user account on the web interface. You can also have the account created automatically on the first start by adding the following configuration to your `vars.yml` file:
 
 ```yaml
-beszel_environment_variable_user_email: admin@example.com
-beszel_environment_variable_user_password: YOUR_PASSWORD_HERE
+beszel_hub_environment_variable_user_email: admin@example.com
+beszel_hub_environment_variable_user_password: YOUR_PASSWORD_HERE
 ```
 
 >[!WARNING]
@@ -78,31 +78,31 @@ beszel_environment_variable_user_password: YOUR_PASSWORD_HERE
 If you run a Beszel agent on the same host as the hub, the hub can connect to it via a Unix socket instead of SSH over the network. To enable it, add the following configuration to your `vars.yml` file:
 
 ```yaml
-beszel_agent_socket_enabled: true
+beszel_hub_agent_socket_enabled: true
 ```
 
-With this setting, the directory specified with `beszel_agent_socket_path_host` (by default `beszel_base_path`/socket) is mounted into the hub container at `/beszel_socket`.
+With this setting, the directory specified with `beszel_hub_agent_socket_path_host` (by default `beszel_hub_base_path`/socket) is mounted into the hub container at `/beszel_socket`.
 
-Configure the agent to listen on a socket in this directory (e.g. with `LISTEN=/beszel/socket/beszel.sock` on the host, adjusted to your `beszel_base_path`), and add the system on the hub's web interface with `/beszel_socket/beszel.sock` as its host.
+Configure the agent to listen on a socket in this directory (e.g. with `LISTEN=/beszel-hub/socket/beszel.sock` on the host, adjusted to your `beszel_hub_base_path`), and add the system on the hub's web interface with `/beszel_socket/beszel.sock` as its host.
 
 >[!NOTE]
-> The hub container runs as the user specified with `beszel_uid` and `beszel_gid`, not as root. Connecting to a Unix socket requires write permission on the socket file, and the agent does not change the permissions of the socket it creates. Make sure that the agent runs as the same user (or group, with a umask which keeps the socket group-writable) as the hub. Otherwise the hub fails to connect to the agent with a "permission denied" error.
+> The hub container runs as the user specified with `beszel_hub_uid` and `beszel_hub_gid`, not as root. Connecting to a Unix socket requires write permission on the socket file, and the agent does not change the permissions of the socket it creates. Make sure that the agent runs as the same user (or group, with a umask which keeps the socket group-writable) as the hub. Otherwise the hub fails to connect to the agent with a "permission denied" error.
 
 ### Single sign-on with OIDC, e.g. Pocket ID (optional)
 
-Beszel supports logging in with an OAuth2/OIDC provider such as [Pocket ID](https://pocket-id.org/). The provider itself is configured on Beszel's PocketBase admin interface (it cannot be set with environment variables), while the login behavior is controlled with the following variables:
+The Beszel hub supports logging in with an OAuth2/OIDC provider such as [Pocket ID](https://pocket-id.org/). The provider itself is configured on the hub's PocketBase admin interface (it cannot be set with environment variables), while the login behavior is controlled with the following variables:
 
 ```yaml
 # Create a Beszel user automatically on the first OIDC login.
-# Without it, a user with the same email address has to exist in Beszel already.
-beszel_environment_variable_user_creation: true
+# Without it, a user with the same email address has to exist on the hub already.
+beszel_hub_environment_variable_user_creation: true
 
 # Open the login page of the provider in the same window instead of a popup.
-beszel_environment_variable_oauth_disable_popup: true
+beszel_hub_environment_variable_oauth_disable_popup: true
 
 # Optional: allow logging in with OIDC only.
 # Enable it only after having confirmed that the OIDC login works.
-beszel_environment_variable_disable_password_auth: true
+beszel_hub_environment_variable_disable_password_auth: true
 ```
 
 >[!NOTE]
@@ -116,7 +116,7 @@ For this, the hub container needs to be connected to the provider's container ne
 
 ```yaml
 # The container network of Pocket ID (`pocket_id_container_network`)
-beszel_container_additional_networks_custom:
+beszel_hub_container_additional_networks_custom:
   - pocket_id
 ```
 
@@ -131,11 +131,11 @@ On Pocket ID's admin interface, go to "OIDC Clients" and add a client with the f
 https://beszel.example.com/api/oauth2-redirect
 ```
 
-If the hub is reachable on several URLs (e.g. via Traefik and via [Tailscale](#using-beszel-with-tailscale-tsdproxy-optional)), add a callback URL for each of them. Then note down the client ID and the client secret.
+If the hub is reachable on several URLs (e.g. via Traefik and via [Tailscale](#using-the-beszel-hub-with-tailscale-tsdproxy-optional)), add a callback URL for each of them. Then note down the client ID and the client secret.
 
-#### Adding the provider on Beszel
+#### Adding the provider on the Beszel hub
 
-Log in to the PocketBase admin interface at `https://beszel.example.com/_/` with a superuser account (the first user created on Beszel is a superuser as well), and then:
+Log in to the PocketBase admin interface at `https://beszel.example.com/_/` with a superuser account (the first user created on the hub is a superuser as well), and then:
 
 1. Open "Settings", and turn off "Hide collection create and edit controls".
 2. Go to "Collections", open the settings of the `users` collection, and select the "Options" tab.
@@ -154,29 +154,29 @@ Log in to the PocketBase admin interface at `https://beszel.example.com/_/` with
 
 Only the auth URL is opened by the browser, so it has to be the public one. The token and user info URLs are requested by the hub over the container network, and therefore point to Pocket ID's container and its port (`pocket_id_container_http_port`, `1411` by default).
 
-After saving the settings, the login page of Beszel shows a button to log in with Pocket ID.
+After saving the settings, the login page of the Beszel hub shows a button to log in with Pocket ID.
 
-### Using Beszel with Tailscale (TSDProxy) (optional)
+### Using the Beszel hub with Tailscale (TSDProxy) (optional)
 
-[TSDProxy](https://almeidapaulopt.github.io/tsdproxy/) makes containers reachable in your Tailscale network (tailnet) at `https://<name>.<tailnet>.ts.net`, with a TLS certificate issued by Tailscale. This is useful for Beszel in two ways: agents can connect to the hub over the tailnet, and the web interface can optionally be made reachable over the tailnet only.
+[TSDProxy](https://almeidapaulopt.github.io/tsdproxy/) makes containers reachable in your Tailscale network (tailnet) at `https://<name>.<tailnet>.ts.net`, with a TLS certificate issued by Tailscale. This is useful for the Beszel hub in two ways: agents can connect to the hub over the tailnet, and the web interface can optionally be made reachable over the tailnet only.
 
 #### Exposing the hub via TSDProxy
 
 To have TSDProxy expose the hub, add the following configuration to your `vars.yml` file:
 
 ```yaml
-beszel_container_labels_tsdproxy_enabled: true
+beszel_hub_container_labels_tsdproxy_enabled: true
 
-# The machine name in the tailnet. Defaults to the container name (`beszel_identifier`).
-# beszel_container_labels_tsdproxy_name: beszel
+# The machine name in the tailnet. Defaults to the container name (`beszel_hub_identifier`).
+# beszel_hub_container_labels_tsdproxy_name: beszel-hub
 ```
 
-TSDProxy needs to share a container network with the hub. If you install TSDProxy yourself, add its network to `beszel_container_additional_networks_custom` (or the other way round). If you use the [MASH playbook](https://github.com/mother-of-all-self-hosting/mash-playbook), this is done automatically when its TSDProxy service is enabled.
+TSDProxy needs to share a container network with the hub. If you install TSDProxy yourself, add its network to `beszel_hub_container_additional_networks_custom` (or the other way round). If you use the [MASH playbook](https://github.com/mother-of-all-self-hosting/mash-playbook), this is done automatically when its TSDProxy service is enabled.
 
-After installing, the hub becomes available at `https://<name>.<tailnet>.ts.net` (e.g. `https://mash-beszel.tail1234.ts.net`) for every device in your tailnet. TSDProxy forwards WebSocket connections, which the agents need.
+After installing, the hub becomes available at `https://<name>.<tailnet>.ts.net` (e.g. `https://mash-beszel-hub.tail1234.ts.net`) for every device in your tailnet. TSDProxy forwards WebSocket connections, which the agents need.
 
 >[!NOTE]
-> TSDProxy serves the hub at the root of the tailnet hostname, so this cannot be combined with hosting Beszel under a subpath (`beszel_path_prefix`).
+> TSDProxy serves the hub at the root of the tailnet hostname, so this cannot be combined with hosting the Beszel hub under a subpath (`beszel_hub_path_prefix`).
 
 #### Connecting agents over Tailscale
 
@@ -196,7 +196,7 @@ The recommended way of connecting agents over the tailnet is to have **the agent
        volumes:
          - /var/run/docker.sock:/var/run/docker.sock:ro
        environment:
-         HUB_URL: https://mash-beszel.tail1234.ts.net
+         HUB_URL: https://mash-beszel-hub.tail1234.ts.net
          TOKEN: YOUR_TOKEN_HERE
          KEY: "ssh-ed25519 YOUR_PUBLIC_KEY_HERE"
    ```
@@ -208,20 +208,20 @@ The agent opens the connection to the hub through the tailnet, and the hub sends
 
 #### Making the web interface reachable over Tailscale only
 
-To have the web interface reachable only from devices in your tailnet, disable the Traefik labels and set the tailnet hostname as `beszel_hostname`, so that `APP_URL` (used for links in notifications) points to it:
+To have the web interface reachable only from devices in your tailnet, disable the Traefik labels and set the tailnet hostname as `beszel_hub_hostname`, so that `APP_URL` (used for links in notifications) points to it:
 
 ```yaml
-beszel_container_labels_traefik_enabled: false
+beszel_hub_container_labels_traefik_enabled: false
 
-beszel_container_labels_tsdproxy_enabled: true
+beszel_hub_container_labels_tsdproxy_enabled: true
 
-# <name>.<tailnet>.ts.net, where <name> is `beszel_container_labels_tsdproxy_name`
-beszel_hostname: mash-beszel.tail1234.ts.net
+# <name>.<tailnet>.ts.net, where <name> is `beszel_hub_container_labels_tsdproxy_name`
+beszel_hub_hostname: mash-beszel-hub.tail1234.ts.net
 ```
 
 The hub is then not reachable from the internet at all, and agents can only connect to it over the tailnet as described above.
 
-Single sign-on with Pocket ID keeps working in this setup, as long as Pocket ID itself is reachable for your browser: the browser opens Pocket ID's auth URL, while the hub talks to Pocket ID over the container network. Make sure to register `https://mash-beszel.tail1234.ts.net/api/oauth2-redirect` as the callback URL on Pocket ID.
+Single sign-on with Pocket ID keeps working in this setup, as long as Pocket ID itself is reachable for your browser: the browser opens Pocket ID's auth URL, while the hub talks to Pocket ID over the container network. Make sure to register `https://mash-beszel-hub.tail1234.ts.net/api/oauth2-redirect` as the callback URL on Pocket ID.
 
 ### Extending the configuration
 
@@ -229,19 +229,19 @@ There are some additional things you may wish to configure about the service.
 
 Take a look at:
 
-- [`defaults/main.yml`](../defaults/main.yml) for some variables that you can customize via your `vars.yml` file. You can override settings (even those that don't have dedicated playbook variables) using the `beszel_environment_variables_additional_variables` variable
+- [`defaults/main.yml`](../defaults/main.yml) for some variables that you can customize via your `vars.yml` file. You can override settings (even those that don't have dedicated playbook variables) using the `beszel_hub_environment_variables_additional_variables` variable
 
-See [this page](https://beszel.dev/guide/environment-variables) of the official documentation for Beszel's config options that you could put in `beszel_environment_variables_additional_variables`.
+See [this page](https://beszel.dev/guide/environment-variables) of the official documentation for Beszel's config options that you could put in `beszel_hub_environment_variables_additional_variables`.
 
 ## Hardening the container
 
 The hub container is started with the following hardening options:
 
-- it runs as the non-root user specified with `beszel_uid` and `beszel_gid`
+- it runs as the non-root user specified with `beszel_hub_uid` and `beszel_hub_gid`
 - all Linux capabilities are dropped (`--cap-drop=ALL`) and privilege escalation is prevented (`--security-opt=no-new-privileges`)
 - the root filesystem is read-only (`--read-only`)
 
-The only writable locations inside the container are the data directory (`/beszel_data`, bind-mounted from `beszel_data_path`), the optional agent socket directory (`/beszel_socket`), and `/tmp`, which is a `tmpfs` mount whose size is controlled by `beszel_container_tmpfs_tmp_size`.
+The only writable locations inside the container are the data directory (`/beszel_data`, bind-mounted from `beszel_hub_data_path`), the optional agent socket directory (`/beszel_socket`), and `/tmp`, which is a `tmpfs` mount whose size is controlled by `beszel_hub_container_tmpfs_tmp_size`.
 
 ## Installing
 
@@ -270,4 +270,4 @@ See [this page](https://beszel.dev/guide/agent-installation) on the official doc
 
 ### Check the service's logs
 
-You can find the logs in [systemd-journald](https://www.freedesktop.org/software/systemd/man/systemd-journald.service.html) by logging in to the server with SSH and running `journalctl -fu beszel` (or how you/your playbook named the service, e.g. `mash-beszel`).
+You can find the logs in [systemd-journald](https://www.freedesktop.org/software/systemd/man/systemd-journald.service.html) by logging in to the server with SSH and running `journalctl -fu beszel-hub` (or how you/your playbook named the service, e.g. `mash-beszel-hub`).
